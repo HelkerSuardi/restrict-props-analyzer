@@ -1,59 +1,59 @@
 'use strict'
 
-const setJustAllowedFields = (configuration, inputValue, valueToReceiveChanges) => {
-  if (typeof inputValue !== 'object') {
+const setJustAllowedFields = (configuration, newValue, oldValue) => {
+  if (typeof newValue !== 'object') {
     return
   }
 
   for (const key of Object.keys(configuration)) {
-    const newValueHasTheKey = Object.keys(inputValue).includes(key)
+    const newValueHasTheKey = Object.keys(newValue).includes(key)
 
     if (!newValueHasTheKey) {
       continue
     }
 
     if (configuration[key] === 'target') {
-      valueToReceiveChanges[key] = inputValue[key]
+      oldValue[key] = newValue[key]
       continue
     }
 
     if (configuration[key].objectArray) {
-      if (!inputValue[key]) {
-        valueToReceiveChanges[key] = inputValue[key]
+      if (!newValue[key]) {
+        oldValue[key] = newValue[key]
         continue
       }
 
-      valueToReceiveChanges[key] = valueToReceiveChanges[key] || []
+      oldValue[key] = oldValue[key] || []
       const newItems = []
 
-      for (let newItemOfArray of inputValue[key]) {
-        const indexInOldValue = valueToReceiveChanges[key].findIndex(item => {
+      for (let newItemOfArray of newValue[key]) {
+        const indexInOldValue = oldValue[key].findIndex(item => {
           return newItemOfArray._id && item._id.toString() === newItemOfArray._id.toString()
         })
 
         if (indexInOldValue < 0) {
-          valueToReceiveChanges[key].push({})
+          oldValue[key].push({})
 
-          const oldValueLength = valueToReceiveChanges[key].length - 1
+          const oldValueLength = oldValue[key].length - 1
 
-          setJustAllowedFields(configuration[key].props, newItemOfArray, valueToReceiveChanges[key][oldValueLength])
-          newItems.push(valueToReceiveChanges[key][oldValueLength]?._id?.toString())
+          setJustAllowedFields(configuration[key].props, newItemOfArray, oldValue[key][oldValueLength])
+          newItems.push(oldValue[key][oldValueLength]?._id?.toString())
         } else {
-          setJustAllowedFields(configuration[key].props, newItemOfArray, valueToReceiveChanges[key][indexInOldValue])
+          setJustAllowedFields(configuration[key].props, newItemOfArray, oldValue[key][indexInOldValue])
         }
       }
 
-      const IdsFromTheClientSide = inputValue[key].map(nv => nv._id?.toString())
-      valueToReceiveChanges[key] = valueToReceiveChanges[key].filter(ov => {
+      const IdsFromTheClientSide = newValue[key].map(nv => nv._id?.toString())
+      oldValue[key] = oldValue[key].filter(ov => {
         return (!ov._id || newItems.includes(ov._id.toString()) || IdsFromTheClientSide.includes(ov._id.toString()))
       })
       continue
     }
 
     if (configuration[key].props) {
-      valueToReceiveChanges[key] = valueToReceiveChanges[key] ?? {}
+      oldValue[key] = oldValue[key] ?? {}
 
-      setJustAllowedFields(configuration[key].props, inputValue[key], valueToReceiveChanges[key])
+      setJustAllowedFields(configuration[key].props, newValue[key], oldValue[key])
     }
   }
 }
